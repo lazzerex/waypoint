@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+
+      - uses: Swatinem/rust-cache@v2
+
+      - uses: actions/cache@v4
+        id: topcoat-cli
+        with:
+          path: |
+            ~/.cargo/bin/topcoat
+            ~/.cargo/bin/cargo-topcoat
+          key: topcoat-cli-0.12.1
+
+      - name: Install Topcoat CLI
+        if: steps.topcoat-cli.outputs.cache-hit != 'true'
+        run: cargo install topcoat-cli --version 0.12.1 --locked
+
+      - name: Build
+        run: cargo build --locked
+
+      - name: Test
+        run: cargo test --locked
+
+      - name: Clippy
+        run: cargo clippy --all-targets --locked -- -D warnings
+
+      - name: Rustfmt
+        run: cargo fmt --all --check
+
+      - name: Topcoat fmt
+        run: topcoat fmt --rustfmt --check
