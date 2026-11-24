@@ -1,0 +1,18 @@
+//! The database connection.
+
+use toasty::Db;
+
+/// The local SQLite database file, created when it is first opened.
+const DATABASE_URL: &str = "sqlite:data.db";
+
+/// Opens the database with every model in the application.
+///
+/// The tables come from migrations. After changing a model, generate a migration with
+/// `cargo run -- toasty migration generate` and apply it with
+/// `cargo run -- toasty migration apply`.
+pub async fn connect() -> toasty::Result<Db> {
+    Db::builder()
+        .models(toasty::models!(crate::*))
+        .connect(DATABASE_URL)
+        .await
+}
