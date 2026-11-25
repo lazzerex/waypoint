@@ -12,7 +12,13 @@ async fn main() {
         std::process::exit(1);
     });
 
-    let db = infra::db::connect(&config.database_url).await.unwrap();
+    let db = match infra::db::connect(&config.database_url).await {
+        Ok(db) => db,
+        Err(_) => {
+            eprintln!("database connection failed; check DATABASE_URL");
+            std::process::exit(1);
+        }
+    };
 
     let mut args = std::env::args().skip(1).peekable();
     if args.peek().is_some_and(|arg| arg == "toasty") {
@@ -23,7 +29,8 @@ async fn main() {
         return;
     }
 
-    topcoat::start(app::router().with(db).build())
-        .await
-        .unwrap();
+    if let Err(error) = topcoat::start(app::router().with(db).build()).await {
+        eprintln!("server failed: {error}");
+        std::process::exit(1);
+    }
 }
