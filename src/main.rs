@@ -1,14 +1,19 @@
 mod app;
 mod components;
+mod config;
 mod domain;
 mod infra;
 mod services;
 
 #[tokio::main]
 async fn main() {
-    let db = infra::db::connect().await.unwrap();
+    let config = config::Config::load().unwrap_or_else(|error| {
+        eprintln!("configuration error: {error}");
+        std::process::exit(1);
+    });
 
-    // `cargo run -- toasty migration <command>` manages the database schema.
+    let db = infra::db::connect(&config.database_url).await.unwrap();
+
     let mut args = std::env::args().skip(1).peekable();
     if args.peek().is_some_and(|arg| arg == "toasty") {
         if let Err(error) = toasty_cli::ToastyCli::new(db).parse_from(args).await {
