@@ -91,7 +91,7 @@ document in one Rust application.
 | Inbound mail | Provider webhook | Postmark, Mailgun, SES, or another HTTP delivery provider |
 | API | **OpenAPI** + `schemars` | Spec generated from the router and API types |
 
-Rationale for each choice is recorded in [DECISIONS.md](docs/DECISIONS.md).
+Rationale for each choice is recorded in [decisions.md](docs/decisions.md).
 
 ## Getting started
 
@@ -158,12 +158,12 @@ waypoint/
 ├── README.md
 ├── CONTRIBUTING.md
 ├── docs/
-│   ├── PRODUCT.md           # vision, personas, scope, user stories
-│   ├── ARCHITECTURE.md      # layers, module map, email/auth/live flows, security
-│   ├── DATA_MODEL.md        # entities, relations, indexes, state machine
-│   ├── API.md               # REST API, webhooks, OpenAPI
-│   ├── ROADMAP.md           # product direction and engineering plan
-│   └── DECISIONS.md         # architecture decision records
+│   ├── overview.md          # problem, approach, users, scope
+│   ├── architecture.md      # layers, request flow, email, security
+│   ├── data-model.md        # entities, relations, indexes, lifecycle
+│   ├── api.md               # JSON API, webhooks, OpenAPI
+│   ├── roadmap.md           # product direction
+│   └── decisions.md         # design decisions and trade-offs
 ├── src/
 │   ├── app/                 # routes, pages, layouts: public and staff areas
 │   ├── components/          # UI components owned by the repository
@@ -176,16 +176,16 @@ waypoint/
 
 Layer dependencies point downward: `domain` has no I/O, `services` depend on
 domain and infrastructure traits, and only `app`, `api`, and `infra` touch
-Topcoat or Toasty types. See [ARCHITECTURE.md](docs/ARCHITECTURE.md).
+Topcoat or Toasty types. See [architecture.md](docs/architecture.md).
 
 ## Documentation
 
-- [Product](docs/PRODUCT.md)
-- [Architecture](docs/ARCHITECTURE.md)
-- [Data model](docs/DATA_MODEL.md)
-- [API and webhooks](docs/API.md)
-- [Roadmap](docs/ROADMAP.md)
-- [Decision records](docs/DECISIONS.md)
+- [Overview](docs/overview.md)
+- [Architecture](docs/architecture.md)
+- [Data model](docs/data-model.md)
+- [API and webhooks](docs/api.md)
+- [Roadmap](docs/roadmap.md)
+- [Design decisions](docs/decisions.md)
 - [Contributing](CONTRIBUTING.md)
 
 ## License
