@@ -6,7 +6,6 @@ const DEFAULT_STORAGE_DIR: &str = "./data/attachments";
 const MIN_SECRET_KEY_BYTES: usize = 32;
 const MIN_INBOUND_SECRET_BYTES: usize = 16;
 
-#[derive(Debug, Clone)]
 pub struct Config {
     pub database_url: String,
     pub app_base_url: String,
@@ -25,6 +24,7 @@ pub struct Config {
 pub enum ConfigError {
     Missing(&'static str),
     Invalid(&'static str, String),
+    EnvFile,
 }
 
 impl fmt::Display for ConfigError {
@@ -32,16 +32,45 @@ impl fmt::Display for ConfigError {
         match self {
             Self::Missing(key) => write!(formatter, "{key} is required"),
             Self::Invalid(key, reason) => write!(formatter, "{key} is invalid: {reason}"),
+            Self::EnvFile => write!(formatter, "failed to load .env"),
         }
     }
 }
 
 impl Error for ConfigError {}
 
+impl fmt::Debug for Config {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("Config")
+            .field("database_url", &"[redacted]")
+            .field("app_base_url", &self.app_base_url)
+            .field("secret_key", &"[redacted]")
+            .field("support_domain", &self.support_domain)
+            .field("mail_from", &"[redacted]")
+            .field("smtp_url", &self.smtp_url.as_ref().map(|_| "[redacted]"))
+            .field("inbound_email_secret", &"[redacted]")
+            .field("storage_dir", &self.storage_dir)
+            .field("trusted_proxies", &self.trusted_proxies)
+            .field("host", &self.host)
+            .field("port", &self.port)
+            .finish()
+    }
+}
+
 impl Config {
     pub fn load() -> Result<Self, ConfigError> {
-        dotenvy::dotenv().ok();
-        Self::from_vars(env::vars())
+        match dotenvy::dotenv() {
+            Ok(_) => {}
+            Err(error) if error.not_found() => {}
+            Err(_) => return Err(ConfigError::EnvFile),
+        }
+
+        Self::from_vars(
+            env::vars_os().filter_map(|(key, value)| {
+                Some((key.into_string().ok()?, value.into_string().ok()?))
+            }),
+        )
     }
 
     pub fn from_vars<I, K, V>(vars: I) -> Result<Self, ConfigError>
@@ -111,17 +140,20 @@ impl Config {
             ));
         }
 
-        if self.support_domain.contains('@') || self.support_domain.contains('/') {
+        if self.support_domain.contains('@')
+            || self.support_domain.contains('/')
+            || self.support_domain.chars().any(char::is_whitespace)
+        {
             return Err(ConfigError::Invalid(
                 "SUPPORT_DOMAIN",
                 "expected a domain name".to_owned(),
             ));
         }
 
-        if !self.mail_from.contains('@') {
+        if !self.mail_from.contains('@') || has_line_break(&self.mail_from) {
             return Err(ConfigError::Invalid(
                 "MAIL_FROM",
-                "expected an email address".to_owned(),
+                "expected a single-line email address".to_owned(),
             ));
         }
 
@@ -133,7 +165,8 @@ impl Config {
         }
 
         if let Some(smtp_url) = &self.smtp_url
-            && !(smtp_url.starts_with("smtp://") || smtp_url.starts_with("smtps://"))
+            && (!(smtp_url.starts_with("smtp://") || smtp_url.starts_with("smtps://"))
+                || smtp_url.chars().any(char::is_whitespace))
         {
             return Err(ConfigError::Invalid(
                 "SMTP_URL",
@@ -157,8 +190,11 @@ impl Config {
             }
         }
 
-        if self.host.trim().is_empty() {
-            return Err(ConfigError::Invalid("HOST", "must not be empty".to_owned()));
+        if self.host.is_empty() || self.host.chars().any(char::is_whitespace) {
+            return Err(ConfigError::Invalid(
+                "HOST",
+                "expected a host name or address".to_owned(),
+            ));
         }
 
         if self.port == 0 {
@@ -190,8 +226,21 @@ fn is_database_url(value: &str) -> bool {
 }
 
 fn is_http_url(value: &str) -> bool {
-    (value.starts_with("http://") || value.starts_with("https://"))
-        && !value.chars().any(char::is_whitespace)
+    let Some(rest) = value
+        .strip_prefix("http://")
+        .or_else(|| value.strip_prefix("https://"))
+    else {
+        return false;
+    };
+
+    !rest.is_empty()
+        && !rest.starts_with('/')
+        && !rest.starts_with('?')
+        && !rest.chars().any(char::is_whitespace)
+}
+
+fn has_line_break(value: &str) -> bool {
+    value.contains('\r') || value.contains('\n')
 }
 
 #[cfg(test)]
@@ -310,5 +359,67 @@ mod tests {
             Config::from_vars(vars).unwrap_err(),
             ConfigError::Invalid("PORT", _)
         ));
+    }
+
+    #[test]
+    fn rejects_invalid_app_base_url() {
+        for value in ["http://", "https:///path", "ftp://example.com"] {
+            let mut vars = vars();
+            vars.retain(|(key, _)| *key != "APP_BASE_URL");
+            vars.push(("APP_BASE_URL", value.to_owned()));
+
+            assert!(matches!(
+                Config::from_vars(vars).unwrap_err(),
+                ConfigError::Invalid("APP_BASE_URL", _)
+            ));
+        }
+    }
+
+    #[test]
+    fn rejects_host_with_whitespace() {
+        let mut vars = vars();
+        vars.push(("HOST", "127.0.0.1 example.com".to_owned()));
+
+        assert!(matches!(
+            Config::from_vars(vars).unwrap_err(),
+            ConfigError::Invalid("HOST", _)
+        ));
+    }
+
+    #[test]
+    fn rejects_header_injection_values() {
+        let values = [
+            (
+                "MAIL_FROM",
+                "support@example.com\r\nBcc: attacker@example.com",
+            ),
+            (
+                "SUPPORT_DOMAIN",
+                "support.example.com\nBcc: attacker@example.com",
+            ),
+            ("SMTP_URL", "smtp://localhost\r\nBcc: attacker@example.com"),
+        ];
+
+        for (key, value) in values {
+            let mut vars = vars();
+            vars.retain(|(name, _)| *name != key);
+            vars.push((key, value.to_owned()));
+
+            assert!(matches!(
+                Config::from_vars(vars).unwrap_err(),
+                ConfigError::Invalid(name, _) if name == key
+            ));
+        }
+    }
+
+    #[test]
+    fn debug_redacts_secrets() {
+        let config = Config::from_vars(vars()).unwrap();
+        let debug = format!("{config:?}");
+
+        assert!(!debug.contains(&config.database_url));
+        assert!(!debug.contains(&config.secret_key));
+        assert!(!debug.contains(&config.inbound_email_secret));
+        assert!(!debug.contains(&config.mail_from));
     }
 }
