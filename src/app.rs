@@ -14,10 +14,8 @@ use topcoat::{
 
 use crate::components::card::{card, card_content, card_description, card_header, card_title};
 
-/// The Geist font family, loaded from Fontsource.
 const GEIST: Font = fontsource_font!(GEIST, weight: [400, 700], style: Normal);
 
-/// Builds the application's router.
 pub fn router() -> RouterBuilder {
     module_router!()
         .discover()
