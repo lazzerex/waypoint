@@ -1,14 +1,14 @@
 # Contributing
 
-Written for future-you as much as for other contributors. It should let you pick the project up after months away.
+It explains how the project is organized and what to check before opening a pull request.
 
 ## Ground rules
 
-1. **Keep domain logic framework-free.** Nothing in `src/domain` imports `topcoat` or the ORM. See [ARCHITECTURE.md](docs/ARCHITECTURE.md).
+1. **Keep domain logic framework-free.** Nothing in `src/domain` imports `topcoat` or the ORM. See [architecture.md](docs/architecture.md).
 2. **Every query is workspace-scoped.** Repository functions take a `WorkspaceId`. No exceptions.
 3. **Authorize inside every shard and procedure.** Topcoat's shard and procedure endpoints bypass page and layout guards, so a guard on the surrounding page does not protect them. Services take an `Actor` and check permissions themselves.
 4. **Use `href!` for every internal link, form action, and redirect.** Never hand-write URLs.
-5. **Write a decision record** in [DECISIONS.md](docs/DECISIONS.md) for any choice that would be expensive to reverse.
+5. **Write a decision record** in [decisions.md](docs/decisions.md) for any choice that would be expensive to reverse.
 6. **Update docs in the same PR** as the behavior change (data model, API, roadmap checkboxes).
 
 ## Development workflow
@@ -55,13 +55,13 @@ Put sample emails in `tests/fixtures/emails/`. Every threading bug gets a new fi
 
 ## Adding a feature (checklist)
 
-- [ ] Update [DATA_MODEL.md](docs/DATA_MODEL.md); add a migration if the schema changes
+- [ ] Update [data-model.md](docs/data-model.md); add a migration if the schema changes
 - [ ] Domain types and rules in `src/domain`
 - [ ] Service function in `src/services` with tests
 - [ ] Page, route, or component under `src/app` (and `topcoat ui add` for any new base component, committing `components.toml`)
 - [ ] API endpoint with an `Operation` for OpenAPI, if exposed
 - [ ] Write a `ticket_events` row and enqueue a webhook job if it changes ticket state
-- [ ] Update [API.md](docs/API.md) and [ROADMAP.md](docs/ROADMAP.md)
+- [ ] Update [api.md](docs/api.md) and [roadmap.md](docs/roadmap.md)
 
 ## Migrations
 
