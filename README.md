@@ -1,48 +1,97 @@
-# Waypoint
+<h1 align="center">Waypoint</h1>
 
-> A fast, self-hostable shared inbox and helpdesk for small teams, built in Rust with [Topcoat](https://github.com/tokio-rs/topcoat).
+<p align="center">
+  <strong>A shared inbox and helpdesk for small teams.</strong><br />
+  Customers reach you by web form or email. Every conversation becomes a ticket
+  with an owner, a status, and a threaded history. Staff triage, assign, and reply
+  from a fast server-rendered interface, with a JSON API and signed webhooks for
+  everything else.
+</p>
 
-**Status:** pre-alpha / planning. Topcoat is itself experimental (0.x), so expect churn on both sides.
+<p align="center">
+  <img src="https://img.shields.io/badge/Rust-2024-CE412B?logo=rust&logoColor=white" alt="Rust 2024" />
+  <img src="https://img.shields.io/badge/Topcoat-0.12.1-4B9CD3" alt="Topcoat 0.12.1" />
+  <img src="https://img.shields.io/badge/Toasty-0.11.0-333333" alt="Toasty 0.11.0" />
+  <img src="https://img.shields.io/badge/SQLite-first-003B57?logo=sqlite&logoColor=white" alt="SQLite first" />
+  <img src="https://img.shields.io/badge/PostgreSQL-ready-4169E1?logo=postgresql&logoColor=white" alt="PostgreSQL ready" />
+  <img src="https://img.shields.io/badge/Tailwind-CSS-06B6D4?logo=tailwindcss&logoColor=white" alt="Tailwind CSS" />
+</p>
 
-Customers reach you through a web form or by emailing a support address. Every conversation becomes a ticket with an owner, a status, and a threaded history. Staff triage, assign, and reply from a server-rendered UI. Everything is also available through a documented JSON API and signed webhooks.
+<p align="center">
+  <a href="https://github.com/lazzerex/waypoint/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/lazzerex/waypoint/ci.yml?label=CI&logo=githubactions&logoColor=white" alt="CI status" /></a>
+  <img src="https://img.shields.io/badge/license-MIT-green" alt="MIT license" />
+  <img src="https://img.shields.io/badge/status-early%20development-orange" alt="Status: early development" />
+</p>
 
-## Why this exists
+<p align="center">
+  <a href="#why-waypoint">Why Waypoint</a> ·
+  <a href="#core-workflows">Core workflows</a> ·
+  <a href="#tech-stack">Tech stack</a> ·
+  <a href="#getting-started">Getting started</a> ·
+  <a href="#configuration">Configuration</a> ·
+  <a href="#project-layout">Project layout</a> ·
+  <a href="#documentation">Documentation</a>
+</p>
 
-Small teams (2-20 people) outgrow a shared Gmail inbox, which has no ownership or status, but do not want a heavy enterprise helpdesk. Waypoint aims for the middle: tickets, assignment, canned replies, and an API, deployed as one binary plus a database.
+---
 
-It is also a realistic project for exercising Topcoat: async server components, forms, sessions, mail, live-updating views, and a generated OpenAPI spec.
+## Why Waypoint
 
-## Features
+Small teams outgrow a shared Gmail inbox. It has no ownership, no status, and no
+reliable history once more than one person starts replying. Enterprise helpdesks
+solve that with a stack of services and a price to match.
 
-### MVP (Phase 1)
+Waypoint aims for the middle: tickets, assignment, canned replies, email
+threading, and an API, deployed as one binary plus a database. It is built for
+teams of two to twenty people who want to self-host and keep the operational
+surface small.
 
-- Public ticket form and inbound email (via provider webhook)
-- Email threading: customer replies attach to the right ticket
-- Ticket list with status, assignee, and priority filters
-- Ticket view with conversation thread, internal notes, and activity history
-- Assign, change status, change priority, reply by email
-- Staff accounts with `admin` and `agent` roles
-- Single workspace (schema is multi-tenant ready)
+The project is also a practical exercise in Topcoat's server-rendered component
+model: async pages, forms, sessions, mail, live regions, and a generated OpenAPI
+document in one Rust application.
 
-### Planned
+## Core workflows
 
-See [docs/ROADMAP.md](docs/ROADMAP.md). Highlights: live-updating lists, canned replies, tags, search, JSON API, webhooks, SLAs, automation rules, reporting, customer portal.
+**Shared inbox**
+
+- A public ticket form and inbound email both create tickets.
+- Inbound replies attach to the existing ticket through a signed reply address
+  and standard `In-Reply-To` and `References` headers.
+- Auto-replies, bounces, and duplicate provider deliveries are filtered out.
+
+**Triage**
+
+- Ticket lists with status, assignee, and priority filters.
+- "My tickets" and "Unassigned" views.
+- Assignment, status changes, priority changes, and internal notes.
+- A full activity history for every ticket.
+
+**Conversation**
+
+- A threaded view of customer messages, agent replies, and internal notes.
+- Replies sent from the support address in the same email thread.
+- Quoted-text stripping, HTML sanitization, and attachment storage.
+
+**Team and integrations**
+
+- Staff accounts with `admin` and `agent` roles.
+- A documented JSON API, idempotency keys, and signed webhooks.
+- OpenAPI generated from the same routes that serve traffic.
 
 ## Tech stack
 
-| Concern | Choice |
-|---|---|
-| Language | Rust (stable) |
-| Web framework | [Topcoat](https://github.com/tokio-rs/topcoat): async server-rendered components, `$(...)` client reactivity, shards, `live!` regions |
-| UI | Tailwind (Topcoat's built-in integration) + [Topcoat UI](https://github.com/tokio-rs/topcoat/blob/main/docs/ui.md) components copied into the repo |
-| Database | SQLite first, PostgreSQL for multi-instance deployments |
-| ORM | [Toasty](https://github.com/tokio-rs/toasty) |
-| Sessions and cookies | Topcoat `session` and `cookie` modules, with our own credential and session tables |
-| Outbound email | Topcoat `mail` (SMTP transport; file and in-memory transports for dev and tests) |
-| Inbound email | Provider webhook (Postmark, Mailgun, SES, ...) |
-| API docs | OpenAPI generated from routes (Topcoat `openapi` feature + `schemars`) |
+| Layer | Technology | Role |
+|---|---|---|
+| Language | **Rust** (2024) | One compiled binary, no runtime |
+| Web | **Topcoat** 0.12.1 | Module routing, async components, forms, sessions, live regions |
+| UI | **Tailwind CSS** + **Topcoat UI** | Utility styling and editable components owned by the repository |
+| Data | **Toasty** 0.11.0 | Models, queries, and migrations |
+| Database | **SQLite** first, **PostgreSQL** ready | Zero-dependency local deployments; PostgreSQL for multiple instances |
+| Outbound mail | **Topcoat mail** | SMTP in production, `.eml` files in development, in-memory in tests |
+| Inbound mail | Provider webhook | Postmark, Mailgun, SES, or another HTTP delivery provider |
+| API | **OpenAPI** + `schemars` | Spec generated from the router and API types |
 
-Rationale for each choice is in [docs/DECISIONS.md](docs/DECISIONS.md).
+Rationale for each choice is recorded in [DECISIONS.md](docs/DECISIONS.md).
 
 ## Getting started
 
@@ -55,27 +104,29 @@ Rationale for each choice is in [docs/DECISIONS.md](docs/DECISIONS.md).
 ### Run locally
 
 ```bash
-git clone <your-repo-url> waypoint
+git clone https://github.com/lazzerex/waypoint.git
 cd waypoint
 
 cp .env.example .env                         # edit values, see Configuration
-cargo run -- toasty migration apply          # create/upgrade the database
+cargo run -- toasty migration apply          # create or upgrade the database
 topcoat dev                                  # build, bundle assets, serve with reload
 ```
 
-The dev server listens on `127.0.0.1:3000` by default (override with `HOST` and `PORT`). In dev, outbound mail is written to `.eml` files by Topcoat's file transport instead of being sent, so you can open them in any mail client.
+The development server listens on `127.0.0.1:3000` by default. Override it with
+`HOST` and `PORT`. In development, outbound mail is written to `.eml` files
+instead of being sent.
 
 ### Common commands
 
 ```bash
-topcoat dev                                  # dev server
-cargo test                                   # unit and integration tests
-cargo clippy --all-targets -- -D warnings
-cargo fmt --all
-topcoat fmt --rustfmt                        # format view! and other macro bodies
-cargo run -- toasty migration generate       # after changing models
+topcoat dev                                     # development server
+cargo test                                      # unit and integration tests
+cargo clippy --all-targets -- -D warnings       # lints
+cargo fmt --all                                 # Rust formatting
+topcoat fmt --rustfmt                           # format view! and other macro bodies
+cargo run -- toasty migration generate          # after changing models
 cargo run -- toasty migration apply
-topcoat ui add <component>                   # copy a Topcoat UI component into src/components
+topcoat ui add <component>                      # copy a Topcoat UI component
 ```
 
 ## Configuration
@@ -85,38 +136,47 @@ Environment variables.
 | Variable | Required | Description |
 |---|---|---|
 | `DATABASE_URL` | yes | Database connection string (SQLite path or PostgreSQL URL) |
-| `APP_BASE_URL` | yes | Public URL, used in emails, webhook links, and absolute `href!`s |
-| `SECRET_KEY` | yes | 32+ random bytes (base64). Keys signed/private cookies and reply-to tokens |
-| `SUPPORT_DOMAIN` | yes | Domain for inbound mail, e.g. `support.example.com` |
+| `APP_BASE_URL` | yes | Public URL used in emails, webhook links, and absolute links |
+| `SECRET_KEY` | yes | 32+ random bytes, base64. Signs cookies and reply-to tokens |
+| `SUPPORT_DOMAIN` | yes | Domain for inbound mail, for example `support.example.com` |
 | `MAIL_FROM` | yes | Default From address for outbound mail |
-| `SMTP_URL` | prod | SMTP connection URL. Unset in dev to use the file transport |
-| `INBOUND_EMAIL_SECRET` | yes | Shared secret authenticating the inbound email webhook |
+| `SMTP_URL` | production | SMTP connection URL. Unset in development to use the file transport |
+| `INBOUND_EMAIL_SECRET` | yes | Shared secret for the inbound email webhook |
 | `STORAGE_DIR` | no | Attachment storage path (default `./data/attachments`) |
-| `TRUSTED_PROXIES` | prod | Proxy addresses allowed to set forwarding headers (needed for correct client IPs) |
+| `TRUSTED_PROXIES` | production | Proxies allowed to set forwarding headers |
 | `HOST`, `PORT` | no | Listen address (default `127.0.0.1:3000`) |
-| `RUST_LOG` | no | Log filter, e.g. `info,waypoint=debug` |
+| `RUST_LOG` | no | Log filter, for example `info,waypoint=debug` |
 
 ## Project layout
 
 ```text
 waypoint/
 ├── Cargo.toml
-├── build.rs              # Tailwind build config
-├── components.toml       # Topcoat UI manifest (commit it)
+├── build.rs                 # Tailwind and icon build configuration
+├── components.toml          # Topcoat UI manifest
+├── styles.css               # Tailwind theme and source scanning
 ├── README.md
 ├── CONTRIBUTING.md
 ├── docs/
-│   ├── PRODUCT.md        # vision, personas, scope, user stories
-│   ├── ARCHITECTURE.md   # layers, module map, email/auth/live flows, security
-│   ├── DATA_MODEL.md     # entities, relations, indexes, state machine
-│   ├── API.md            # REST API, webhooks, OpenAPI
-│   ├── ROADMAP.md        # phased plan with checklists
-│   └── DECISIONS.md      # architecture decision records
-├── toasty/               # generated by Toasty (migrations and snapshots)
-├── src/                  # see docs/ARCHITECTURE.md for the module map
-└── tests/
-    └── fixtures/emails/  # real .eml samples for threading tests
+│   ├── PRODUCT.md           # vision, personas, scope, user stories
+│   ├── ARCHITECTURE.md      # layers, module map, email/auth/live flows, security
+│   ├── DATA_MODEL.md        # entities, relations, indexes, state machine
+│   ├── API.md               # REST API, webhooks, OpenAPI
+│   ├── ROADMAP.md           # product direction and engineering plan
+│   └── DECISIONS.md         # architecture decision records
+├── src/
+│   ├── app/                 # routes, pages, layouts: public and staff areas
+│   ├── components/          # UI components owned by the repository
+│   ├── domain/              # pure types and business rules
+│   ├── services/            # use cases and transactions
+│   └── infra/               # database, mail, storage, search, jobs
+├── tests/fixtures/emails/   # real .eml samples for threading tests
+└── toasty/                  # generated migrations and snapshots
 ```
+
+Layer dependencies point downward: `domain` has no I/O, `services` depend on
+domain and infrastructure traits, and only `app`, `api`, and `infra` touch
+Topcoat or Toasty types. See [ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Documentation
 
@@ -130,4 +190,4 @@ waypoint/
 
 ## License
 
-TBD (MIT or Apache-2.0 suggested).
+MIT. See [LICENSE](LICENSE).
