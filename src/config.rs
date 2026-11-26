@@ -60,17 +60,16 @@ impl fmt::Debug for Config {
 
 impl Config {
     pub fn load() -> Result<Self, ConfigError> {
-        match dotenvy::dotenv() {
-            Ok(_) => {}
-            Err(error) if error.not_found() => {}
-            Err(_) => return Err(ConfigError::EnvFile),
-        }
+        load_env()?;
 
-        Self::from_vars(
-            env::vars_os().filter_map(|(key, value)| {
-                Some((key.into_string().ok()?, value.into_string().ok()?))
-            }),
-        )
+        Self::from_vars(environment_vars())
+    }
+
+    pub fn load_database_url() -> Result<String, ConfigError> {
+        load_env()?;
+
+        let vars: HashMap<String, String> = environment_vars().collect();
+        required(&vars, "DATABASE_URL")
     }
 
     pub fn from_vars<I, K, V>(vars: I) -> Result<Self, ConfigError>
@@ -206,6 +205,19 @@ impl Config {
 
         Ok(())
     }
+}
+
+fn load_env() -> Result<(), ConfigError> {
+    match dotenvy::dotenv() {
+        Ok(_) => Ok(()),
+        Err(error) if error.not_found() => Ok(()),
+        Err(_) => Err(ConfigError::EnvFile),
+    }
+}
+
+fn environment_vars() -> impl Iterator<Item = (String, String)> {
+    env::vars_os()
+        .filter_map(|(key, value)| Some((key.into_string().ok()?, value.into_string().ok()?)))
 }
 
 fn required(vars: &HashMap<String, String>, key: &'static str) -> Result<String, ConfigError> {
