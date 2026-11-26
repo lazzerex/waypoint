@@ -4,11 +4,16 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+argon2 = "0.5.3"
 dotenvy = "0.15.7"
-toasty = { version = "=0.11.0", features = ["sqlite"] }
+jiff = "0.2.46"
+rpassword = "7.4.0"
+serde = { version = "1.0.228", features = ["derive"] }
+toasty = { version = "=0.11.0", features = ["jiff", "sqlite"] }
 toasty-cli = "=0.11.0"
 tokio = { version = "1.51.1", features = ["macros", "rt-multi-thread"] }
-topcoat = { version = "=0.12.1", default-features = false, features = ["asset", "discover", "font-fontsource", "icon-iconify", "router", "runtime", "serve", "tailwind", "ui", "view"] }
+topcoat = { version = "=0.12.1", default-features = false, features = ["asset", "cookie", "discover", "font-fontsource", "icon-iconify", "router", "runtime", "serve", "session", "tailwind", "ui", "view"] }
+uuid = "1.29.3"
 
 [build-dependencies]
 topcoat = { version = "=0.12.1", default-features = false, features = ["icon-iconify", "tailwind"] }
